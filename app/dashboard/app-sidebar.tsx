@@ -20,6 +20,7 @@ import {
   IconUsers,
   IconSparkles,
   IconBrandOpenai,
+  IconBrandReddit,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/app/dashboard/nav-documents"
@@ -38,6 +39,8 @@ import {
 import { ChatMaxingIconColoured } from "@/components/logo"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
 
 const data = {
   navMain: [
@@ -47,9 +50,21 @@ const data = {
       icon: IconDashboard,
     },
     {
+      title: "Reddit Posts",
+      url: "/dashboard/posts",
+      icon: IconBrandReddit,
+    },
+    {
       title: "Payment gated",
       url: "/dashboard/payment-gated",
       icon: IconSparkles,
+    },
+  ],
+  navAdmin: [
+    {
+      title: "Sources",
+      url: "/dashboard/admin/sources",
+      icon: IconDatabase,
     },
   ],
   navSecondary: [
@@ -89,6 +104,10 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const me = useQuery(api.users.current)
+  const navMain =
+    me?.role === "admin" ? [...data.navMain, ...data.navAdmin] : data.navMain
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -108,7 +127,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMain} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>

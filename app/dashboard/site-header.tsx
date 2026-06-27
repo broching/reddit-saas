@@ -9,6 +9,10 @@ function getPageTitle(pathname: string): string {
   switch (pathname) {
     case "/dashboard":
       return "Dashboard"
+    case "/dashboard/posts":
+      return "Reddit Posts"
+    case "/dashboard/admin/sources":
+      return "Sources"
     case "/dashboard/payment-gated":
       return "Payment gated"
     default:

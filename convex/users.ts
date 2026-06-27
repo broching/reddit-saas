@@ -1,6 +1,7 @@
-import { internalMutation, query, QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query, QueryCtx } from "./_generated/server";
 import { UserJSON } from "@clerk/backend";
 import { v, Validator } from "convex/values";
+import { userPreferences } from "./validators";
 
 export const current = query({
   args: {},
@@ -19,10 +20,23 @@ export const upsertFromClerk = internalMutation({
 
     const user = await userByExternalId(ctx, data.id);
     if (user === null) {
-      await ctx.db.insert("users", userAttributes);
+      // New users default to the "user" role. Promote to "admin" out-of-band.
+      await ctx.db.insert("users", { ...userAttributes, role: "user" as const });
     } else {
+      // Patch profile fields only — never clobber role/preferences here.
       await ctx.db.patch(user._id, userAttributes);
     }
+  },
+});
+
+/** Update the signed-in user's UI preferences. Identity is derived server-side. */
+export const updatePreferences = mutation({
+  args: { preferences: userPreferences },
+  returns: v.null(),
+  handler: async (ctx, { preferences }) => {
+    const user = await getCurrentUserOrThrow(ctx);
+    await ctx.db.patch(user._id, { preferences });
+    return null;
   },
 });
 
@@ -47,6 +61,15 @@ export async function getCurrentUserOrThrow(ctx: QueryCtx) {
   const userRecord = await getCurrentUser(ctx);
   if (!userRecord) throw new Error("Can't get current user");
   return userRecord;
+}
+
+/** Throws unless the signed-in user has the "admin" role. Use to gate admin functions. */
+export async function requireAdmin(ctx: QueryCtx) {
+  const user = await getCurrentUserOrThrow(ctx);
+  if (user.role !== "admin") {
+    throw new Error("Forbidden: admin role required");
+  }
+  return user;
 }
 
 export async function getCurrentUser(ctx: QueryCtx) {
