@@ -2,11 +2,11 @@
 
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
+import { Doc } from "@/convex/_generated/dataModel"
 import { Badge } from "@/components/ui/badge"
 import { IconLoader2, IconCircleCheck, IconAlertTriangle } from "@tabler/icons-react"
-import { cn } from "@/lib/utils"
 
-function timeAgo(ts: number): string {
+export function timeAgo(ts: number): string {
   const s = Math.max(0, Math.floor((Date.now() - ts) / 1000))
   if (s < 60) return `${s}s ago`
   const m = Math.floor(s / 60)
@@ -28,13 +28,45 @@ function ProgressBar({ value }: { value: number }) {
   )
 }
 
+/** One activity row — shared by the live feed and the Activity page. */
+export function ActivityItem({ run }: { run: Doc<"pipelineRuns"> }) {
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {run.status === "running" && (
+            <IconLoader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+          )}
+          {run.status === "success" && (
+            <IconCircleCheck className="size-4 shrink-0 text-green-600" />
+          )}
+          {(run.status === "error" || run.status === "retrying") && (
+            <IconAlertTriangle className="size-4 shrink-0 text-destructive" />
+          )}
+          <Badge variant="outline" className="shrink-0 text-[10px] capitalize">
+            {run.kind}
+          </Badge>
+          <span className="truncate text-sm">
+            {run.message ?? run.label ?? run.kind}
+          </span>
+        </div>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {timeAgo(run.startedAt)}
+        </span>
+      </div>
+      {run.status === "running" && <ProgressBar value={run.progress ?? 0} />}
+      {run.status === "error" && run.error && (
+        <p className="mt-1 truncate text-xs text-destructive/80">{run.error}</p>
+      )}
+    </div>
+  )
+}
+
 /**
- * Live feed of pipeline activity (crawls, and later AI analysis). Reactively
- * updates as runs progress — no polling needed, Convex pushes changes.
+ * Live feed of recent pipeline activity. Reactively updates as runs progress.
  */
 export function ActivityFeed({ limit = 12 }: { limit?: number }) {
   const runs = useQuery(api.ops.recentActivity, { limit })
-
   const runningCount = runs?.filter((r) => r.status === "running").length ?? 0
 
   return (
@@ -49,6 +81,9 @@ export function ActivityFeed({ limit = 12 }: { limit?: number }) {
             </Badge>
           )}
         </div>
+        <a href="/dashboard/activity" className="text-xs text-muted-foreground hover:text-foreground">
+          View all →
+        </a>
       </div>
       <div className="divide-y">
         {runs === undefined && (
@@ -60,33 +95,7 @@ export function ActivityFeed({ limit = 12 }: { limit?: number }) {
           </div>
         )}
         {runs?.map((r) => (
-          <div key={r._id} className="px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                {r.status === "running" && (
-                  <IconLoader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                )}
-                {r.status === "success" && (
-                  <IconCircleCheck className="size-4 shrink-0 text-green-600" />
-                )}
-                {(r.status === "error" || r.status === "retrying") && (
-                  <IconAlertTriangle className="size-4 shrink-0 text-destructive" />
-                )}
-                <span className="truncate text-sm">
-                  {r.message ?? r.label ?? r.kind}
-                </span>
-              </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {timeAgo(r.startedAt)}
-              </span>
-            </div>
-            {r.status === "running" && (
-              <ProgressBar value={r.progress ?? 0} />
-            )}
-            {r.status === "error" && r.error && (
-              <p className={cn("mt-1 text-xs text-destructive/80")}>{r.error}</p>
-            )}
-          </div>
+          <ActivityItem key={r._id} run={r as Doc<"pipelineRuns">} />
         ))}
       </div>
     </div>

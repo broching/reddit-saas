@@ -21,6 +21,8 @@ import {
   IconSparkles,
   IconBrandOpenai,
   IconBrandReddit,
+  IconActivity,
+  IconBookmark,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/app/dashboard/nav-documents"
@@ -50,9 +52,39 @@ const data = {
       icon: IconDashboard,
     },
     {
+      title: "Opportunities",
+      url: "/dashboard/opportunities",
+      icon: IconSparkles,
+    },
+    {
       title: "Reddit Posts",
       url: "/dashboard/posts",
       icon: IconBrandReddit,
+    },
+    {
+      title: "Problems",
+      url: "/dashboard/problems",
+      icon: IconReport,
+    },
+    {
+      title: "Clusters",
+      url: "/dashboard/clusters",
+      icon: IconListDetails,
+    },
+    {
+      title: "Trending",
+      url: "/dashboard/trending",
+      icon: IconChartBar,
+    },
+    {
+      title: "Activity",
+      url: "/dashboard/activity",
+      icon: IconActivity,
+    },
+    {
+      title: "Bookmarks",
+      url: "/dashboard/bookmarks",
+      icon: IconBookmark,
     },
     {
       title: "Payment gated",
@@ -66,22 +98,22 @@ const data = {
       url: "/dashboard/admin/sources",
       icon: IconDatabase,
     },
+    {
+      title: "Analytics",
+      url: "/dashboard/admin/analytics",
+      icon: IconChartBar,
+    },
   ],
   navSecondary: [
     {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
       title: "Search",
-      url: "#",
+      url: "/dashboard/search",
       icon: IconSearch,
+    },
+    {
+      title: "Settings",
+      url: "/dashboard/settings",
+      icon: IconSettings,
     },
   ],
   documents: [

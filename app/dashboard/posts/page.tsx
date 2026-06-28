@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQuery, usePaginatedQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
-import { Doc } from "@/convex/_generated/dataModel"
+import { Doc, Id } from "@/convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -44,11 +44,13 @@ function CommentNode({
 }) {
   const replies = childrenByParent.get(comment.externalId) ?? []
   return (
-    <div
-      className="border-l pl-3"
-      style={{ marginLeft: depth === 0 ? 0 : 4 }}
-    >
-      <div className="py-2">
+    <div className={depth === 0 ? "" : "border-l pl-2 sm:pl-3"}>
+      <a
+        href={comment.url}
+        target="_blank"
+        rel="noreferrer"
+        className="block rounded py-2 transition-colors hover:bg-muted/40"
+      >
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">
             u/{comment.author ?? "—"}
@@ -61,8 +63,8 @@ function CommentNode({
             </Badge>
           )}
         </div>
-        <p className="mt-1 whitespace-pre-wrap text-sm">{comment.body}</p>
-      </div>
+        <p className="mt-1 whitespace-pre-wrap break-words text-sm">{comment.body}</p>
+      </a>
       {replies.map((r) => (
         <CommentNode
           key={r._id}
@@ -126,12 +128,58 @@ function Thread({ post }: { post: DocT }) {
   )
 }
 
+function scoreColor(score: number): string {
+  if (score >= 70) return "bg-green-600"
+  if (score >= 45) return "bg-amber-500"
+  return "bg-muted-foreground"
+}
+
+/** Inline AI analysis for a post (problem extraction + opportunity score). */
+function AIPanel({ documentId }: { documentId: Id<"documents"> }) {
+  const a = useQuery(api.ai.queries.getAnalysis, { documentId })
+  if (!a) return null
+  if (a.opportunityScore === undefined || !a.stage1) {
+    return (
+      <p className="mt-2 text-xs text-muted-foreground">
+        AI: not flagged as a problem
+      </p>
+    )
+  }
+  return (
+    <div className="mt-3 rounded-md border bg-muted/40 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold text-white ${scoreColor(
+            a.opportunityScore,
+          )}`}
+        >
+          Opportunity {a.opportunityScore}
+        </span>
+        <Badge variant="outline" className="max-w-full truncate">
+          {a.industry}
+        </Badge>
+        {a.stage2 && (
+          <span className="text-xs text-muted-foreground">
+            WTP: {a.stage2.willingnessToPay} · {a.stage2.marketSizeEstimate}
+          </span>
+        )}
+      </div>
+      <div className="mb-0.5 mt-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+        AI analysis
+      </div>
+      <p className="break-words text-sm">{a.stage1.problemStatement}</p>
+    </div>
+  )
+}
+
 function PostThread({ post }: { post: DocT }) {
   const [open, setOpen] = React.useState(false)
+  const [expanded, setExpanded] = React.useState(false)
+  const isLong = post.body.length > 220
   return (
     <Card>
       <CardContent className="py-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Badge variant="outline">r/{post.channel}</Badge>
           <Badge
             variant={post.analysisStatus === "analyzed" ? "default" : "secondary"}
@@ -147,15 +195,31 @@ function PostThread({ post }: { post: DocT }) {
           href={post.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-2 block text-lg font-semibold hover:underline"
+          className="mt-2 block break-words text-base font-semibold hover:underline sm:text-lg"
         >
           {post.title ?? post.body.slice(0, 140)}
         </a>
         {post.title && post.body && (
-          <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">
-            {post.body}
-          </p>
+          <>
+            <p
+              className={`mt-1 whitespace-pre-wrap break-words text-sm text-muted-foreground ${
+                expanded ? "" : "line-clamp-3"
+              }`}
+            >
+              {post.body}
+            </p>
+            {isLong && (
+              <button
+                onClick={() => setExpanded((e) => !e)}
+                className="mt-1 text-xs font-medium text-primary hover:underline"
+              >
+                {expanded ? "Show less" : "Read more"}
+              </button>
+            )}
+          </>
         )}
+
+        <AIPanel documentId={post._id} />
 
         <Button
           variant="ghost"
@@ -210,7 +274,7 @@ function PostsInner() {
           </p>
         </div>
         <Select value={channel ?? ALL} onValueChange={setChannel}>
-          <SelectTrigger className="w-56">
+          <SelectTrigger className="w-full sm:w-56">
             <SelectValue placeholder="All subreddits" />
           </SelectTrigger>
           <SelectContent>

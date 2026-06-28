@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { internalMutation, query } from "./_generated/server";
 import { pipelineKind, pipelineRunStatus, tokenUsage } from "./validators";
 import { getCurrentUserOrThrow } from "./users";
@@ -87,6 +88,39 @@ const pipelineRunDoc = v.object({
   costEstimate: v.optional(v.number()),
   startedAt: v.number(),
   finishedAt: v.optional(v.number()),
+});
+
+/** Paginated pipeline activity with optional kind/status filters (Activity page). */
+export const activityPage = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    kind: v.optional(pipelineKind),
+    status: v.optional(pipelineRunStatus),
+  },
+  handler: async (ctx, { paginationOpts, kind, status }) => {
+    await getCurrentUserOrThrow(ctx);
+    if (kind) {
+      return await ctx.db
+        .query("pipelineRuns")
+        .withIndex("by_kind_and_status", (q) =>
+          status ? q.eq("kind", kind).eq("status", status) : q.eq("kind", kind),
+        )
+        .order("desc")
+        .paginate(paginationOpts);
+    }
+    if (status) {
+      return await ctx.db
+        .query("pipelineRuns")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .order("desc")
+        .paginate(paginationOpts);
+    }
+    return await ctx.db
+      .query("pipelineRuns")
+      .withIndex("by_startedAt")
+      .order("desc")
+      .paginate(paginationOpts);
+  },
 });
 
 /** Recent pipeline activity, newest first — drives the live activity feed. */

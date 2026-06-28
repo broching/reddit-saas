@@ -133,6 +133,7 @@ export default defineSchema({
     industry: v.optional(v.string()),
     opportunityScore: v.optional(v.number()),
     confidence: v.optional(v.number()), // 0–1
+    embeddingId: v.optional(v.id("embeddings")),
     stageStatus: docStageStatus,
     tokenUsage: v.optional(tokenUsage),
   })
@@ -179,6 +180,10 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_memberCount", ["memberCount"])
     .index("by_lastSeen", ["lastSeenAt"])
+    .searchIndex("search_clusters", {
+      searchField: "summary",
+      filterFields: ["status"],
+    })
     .vectorIndex("by_centroid", {
       vectorField: "centroid",
       dimensions: EMBEDDING_DIMENSIONS,
@@ -302,6 +307,7 @@ export default defineSchema({
     finishedAt: v.optional(v.number()),
   })
     .index("by_kind_and_status", ["kind", "status"])
+    .index("by_status", ["status"])
     .index("by_startedAt", ["startedAt"]),
 
   /** Daily usage aggregate for cost guardrails. */

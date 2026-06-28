@@ -13,4 +13,36 @@ crons.interval(
   {},
 );
 
+// Analyze a batch of pending documents through the AI pipeline (budget-gated).
+crons.interval(
+  "analyze documents",
+  { minutes: 5 },
+  internal.ai.pipeline.analyzeQueue,
+  {},
+);
+
+// Embed + cluster analyzed problems not yet assigned to a cluster.
+crons.interval(
+  "cluster problems",
+  { minutes: 5 },
+  internal.clustering.assign.clusterQueue,
+  {},
+);
+
+// Generate SaaS opportunities for clusters that don't have one yet.
+crons.interval(
+  "build opportunities",
+  { minutes: 10 },
+  internal.opportunities.build.opportunityQueue,
+  {},
+);
+
+// Recompute trend velocity/growth/direction from day buckets.
+crons.interval(
+  "compute trends",
+  { hours: 6 },
+  internal.trending.compute.computeTrends,
+  {},
+);
+
 export default crons;
